@@ -3,6 +3,13 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+deploy_aws.sh
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
+
 # C extensions
 *.so
 
