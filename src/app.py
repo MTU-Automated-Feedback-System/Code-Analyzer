@@ -13,6 +13,8 @@ def hello_world():
 def post_submission():
     payload = json.loads(request.data)
     print(payload)
+    
+    
     # SubmissionId = shortuuid.uuid()
     # payload["SubmissionId"] = SubmissionId
     # payload["status"] = "processing"
