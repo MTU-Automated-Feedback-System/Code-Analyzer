@@ -4,7 +4,7 @@ from io import StringIO
 from contextlib import redirect_stdout
 
 allowed_builtins = {"__builtins__": {"min": min,
-                                     "print": print, "max": max, "range": range}}
+                                     "print": print, "max": max, "range": range, "str": str, "int": int, "float": float}}
 
 
 def handle_payload(payload):
@@ -20,8 +20,9 @@ def execute_code(code):
 
 
 def update_payload(payload, output, status):
-    payload["output"] = base64.b64encode(output)
-    payload["status"] = status
+
+    payload["compiled_output"] = base64.b64encode(output.encode('utf-8')).decode('utf-8')
+    payload["compiled_status"] = status
 
 def run(payload):
     result = ""
@@ -46,9 +47,9 @@ def run(payload):
         result += ""
     
     except Exception as ex:
-        result += "Unexpected error. " + ex
+        result += "Unexpected error. " + str(ex)
     
     print(result)
     update_payload(payload, result, status)
-    
+    print(payload)
     return payload
