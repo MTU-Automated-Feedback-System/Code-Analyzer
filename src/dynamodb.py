@@ -12,3 +12,4 @@ dynamo_client = boto3.resource(
 
 assignment_table = dynamo_client.Table('Assignments')
 submission_table = dynamo_client.Table('Submissions')
+

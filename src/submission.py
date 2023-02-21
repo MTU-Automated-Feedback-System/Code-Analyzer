@@ -1,34 +1,54 @@
 import base64
 import binascii
+from io import StringIO
+from contextlib import redirect_stdout
 
-allowed_builtins = {"__builtins__": {"min": min, "print": print, "max": max, "range": range}}
+allowed_builtins = {"__builtins__": {"min": min,
+                                     "print": print, "max": max, "range": range}}
 
-def decode_payload(payload):
+
+def handle_payload(payload):
     submission = base64.b64decode(payload["source_code"])
-    print(submission)
     return compile(submission, '', 'exec')
-    # return submission
 
+
+def execute_code(code):
+    output = StringIO()
+    with redirect_stdout(output):
+        exec(code, allowed_builtins, {})
+    return output
+
+
+def update_payload(payload, output, status):
+    payload["output"] = base64.b64encode(output)
+    payload["status"] = status
 
 def run(payload):
-    output = ""
+    result = ""
+    status = "failed"
     
     try:
-        sub_compiled = decode_payload(payload)
-        print(sub_compiled)
-        exec(sub_compiled, allowed_builtins, {})
+        sub_compiled = handle_payload(payload)
+        output = execute_code(sub_compiled)
+        result += output.getvalue()
+        status = "success"
         
     except binascii.Error as decode_err:
-        output += decode_err.msg        
-    
+        result += decode_err.msg
+
     except SyntaxError as err:
-        output += f"'Syntax Error': '{err.msg}'"
-    
+        result += f"'Syntax Error': '{err.msg}'"
+
     except NameError as name_err:
-        output += f"'Name Error': '{name_err.name}'"
+        result += f"'Name Error': '{name_err.name}'"
+
+    except RuntimeError as run_err:
+        result += ""
     
-    except:
-        output += "Unexpected error."
-
-
-    return output
+    except Exception as ex:
+        result += "Unexpected error. " + ex
+    
+    print(result)
+    update_payload(payload, result, status)
+    
+    return payload
