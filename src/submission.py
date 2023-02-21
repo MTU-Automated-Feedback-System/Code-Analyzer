@@ -4,7 +4,12 @@ from io import StringIO
 from contextlib import redirect_stdout
 
 allowed_builtins = {"__builtins__": {"min": min,
-                                     "print": print, "max": max, "range": range, "str": str, "int": int, "float": float}}
+                                     "print": print,
+                                     "max": max,
+                                     "range": range,
+                                     "str": str,
+                                     "int": int,
+                                     "float": float}}
 
 
 def handle_payload(payload):
@@ -14,26 +19,28 @@ def handle_payload(payload):
 
 def execute_code(code):
     output = StringIO()
+    d = dict(locals(), **globals())
     with redirect_stdout(output):
-        exec(code, allowed_builtins, {})
+        exec(code, d, d)
     return output
 
 
 def update_payload(payload, output, status):
-
-    payload["compiled_output"] = base64.b64encode(output.encode('utf-8')).decode('utf-8')
+    payload["compiled_output"] = base64.b64encode(
+        output.encode('utf-8')).decode('utf-8')
     payload["compiled_status"] = status
+
 
 def run(payload):
     result = ""
     status = "failed"
-    
+
     try:
         sub_compiled = handle_payload(payload)
         output = execute_code(sub_compiled)
         result += output.getvalue()
         status = "success"
-        
+
     except binascii.Error as decode_err:
         result += decode_err.msg
 
@@ -45,9 +52,9 @@ def run(payload):
 
     except RuntimeError as run_err:
         result += ""
-    
+
     except Exception as ex:
         result += "Unexpected error. " + str(ex)
-    
+
     update_payload(payload, result, status)
     return payload
