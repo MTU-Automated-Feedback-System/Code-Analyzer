@@ -49,7 +49,5 @@ def run(payload):
     except Exception as ex:
         result += "Unexpected error. " + str(ex)
     
-    print(result)
     update_payload(payload, result, status)
-    print(payload)
     return payload
