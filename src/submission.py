@@ -9,7 +9,8 @@ allowed_builtins = {"__builtins__": {"min": min,
                                      "range": range,
                                      "str": str,
                                      "int": int,
-                                     "float": float}}
+                                     "float": float,
+                                     "enumerate": enumerate}}
 
 
 def handle_payload(payload):
@@ -19,9 +20,8 @@ def handle_payload(payload):
 
 def execute_code(code):
     output = StringIO()
-    d = dict(locals(), **globals())
     with redirect_stdout(output):
-        exec(code, d, d)
+        exec(code, allowed_builtins, allowed_builtins)
     return output
 
 
@@ -51,7 +51,7 @@ def run(payload):
         result += f"'Name Error': '{name_err.name}'"
 
     except RuntimeError as run_err:
-        result += ""
+        result += f"'Runtime Error': '{run_err.with_traceback()}'"
 
     except Exception as ex:
         result += "Unexpected error. " + str(ex)
