@@ -1,6 +1,7 @@
 {
-    "AssignmentId":"",
-    "Descritption":"This that this",
-    "Example":"base64 encoded code",
-    "TestsCases":"List of cases"
+    "assignment_id":"",
+    "descritption":"This that this",
+    "example":"base64 encoded code",
+    "tests_cases":["List of cases"],
+    "allowed_functions": ["List of functions"]
 }
