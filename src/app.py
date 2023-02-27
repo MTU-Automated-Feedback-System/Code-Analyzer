@@ -16,4 +16,4 @@ def post_submission():
     payload = submission.run(payload)
     requests.patch(os.environ.get("API_URL")+"/submission", json=payload)
     
-    return f"Submission '{payload['SubmissionId']}' received"
+    return f"Submission '{payload['submission_id']}' received"

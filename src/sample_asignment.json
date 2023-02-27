@@ -1,5 +1,6 @@
 {
     "assignment_id":"",
+    "creation_date": "",
     "descritption":"This that this",
     "example":"base64 encoded code",
     "tests_cases":["List of cases"],
