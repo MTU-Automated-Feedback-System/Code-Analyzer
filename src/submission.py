@@ -10,7 +10,8 @@ allowed_builtins = {"__builtins__": {"min": min,
                                      "str": str,
                                      "int": int,
                                      "float": float,
-                                     "enumerate": enumerate}}
+                                     "enumerate": enumerate,
+                                     "len": len}}
 
 
 def handle_payload(payload):
