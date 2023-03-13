@@ -1,7 +1,11 @@
 {
     "exercise_id":"",
     "creation_date": "",
-    "descritption":"This that this",
+    "descritption":{
+        "title": "Exercise 1",
+        "description": "This is the descritption of the exercise.",
+        "examples": ["example1"]
+    },
     "example":"base64 encoded code",
     "tests_cases":["List of cases"],
     "allowed_functions": ["List of functions"]
