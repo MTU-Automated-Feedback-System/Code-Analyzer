@@ -14,7 +14,8 @@ def hello_world():
 def post_submission():
     payload = json.loads(request.data)
     payload = submission.run(payload)
-    requests.patch(os.environ.get("API_URL")+"/submission", json=payload)
+    print(payload)
+    # requests.patch(os.environ.get("API_URL")+"/submission", json=payload)
     
     # Following AWS example returning OK
     # return f"Submission '{payload['submission_id']}' received"

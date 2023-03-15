@@ -32,6 +32,7 @@ def update_payload(payload, output, status):
     payload["compiled_status"] = status
 
 
+
 def run(payload):
     result = ""
     status = "failed"
@@ -41,6 +42,8 @@ def run(payload):
         output = execute_code(sub_compiled)
         result += output.getvalue()
         status = "success"
+        print(allowed_builtins)
+        print(allowed_builtins["chingchong"]())
 
     except binascii.Error as decode_err:
         result += decode_err.msg
