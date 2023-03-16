@@ -14,6 +14,7 @@ def hello_world():
 def post_submission():
     payload = json.loads(request.data)
     payload = submission.run(payload)
+    
     print(payload)
     # requests.patch(os.environ.get("API_URL")+"/submission", json=payload)
     

@@ -7,6 +7,10 @@
         "examples": ["example1"]
     },
     "example":"base64 encoded code",
-    "tests_cases":["List of cases"],
-    "allowed_functions": ["List of functions"]
+    "test_cases":["Ky0tLS0tLSsKLSAgICAgIC0KLSAgICAgIC0KLSAgICAgIC0KKy0tLS0tLSs="],
+    "main_name": "draw_box",
+    "allowed_functions": ["List of functions"],
+    "hints": "",
+    "default_code": "ZGVmIGRyYXdfYm94KHRleHQpOgogICAgIyBXcml0ZSB5b3VyIGNvZGUgaGVyZQogICAgIyBBZGQgYSBmb3IgbG9vcCB0byBkcm9wIHRoZSBib3gKCmRyYXdfYm94KCk="
+
 }
