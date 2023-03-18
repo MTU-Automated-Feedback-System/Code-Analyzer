@@ -15,7 +15,10 @@ def post_submission():
     payload = json.loads(request.data)
     payload = submission.run(payload)
     
-    print(payload)
+    print(payload["compiled_status"])
+    print(payload["compiled_output"])
+    print(payload["test_result"])
+    # payload.pop("exercise")
     # requests.patch(os.environ.get("API_URL")+"/submission", json=payload)
     
     # Following AWS example returning OK

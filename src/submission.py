@@ -1,6 +1,5 @@
 import base64, binascii, requests, os, json
-from io import StringIO
-from contextlib import redirect_stdout
+from my_wrappers import capture_output
 
 allowed_builtins = {"__builtins__": {"min": min,
                                      "print": print,
@@ -13,21 +12,14 @@ allowed_builtins = {"__builtins__": {"min": min,
                                      "len": len}}
 
 
-
 def handle_payload(payload):
     submission = base64.b64decode(payload["source_code"])
-    response = requests.get(os.environ.get("API_URL")+"/exercise/"+submission["exercise_id"], json=payload)
-    exercise = json.loads(response.data)
-    return submission, exercise
-
+    return submission
 
 # Execute some code and catch all the output (print) and returns it
-def execute_code(code):
-    output = StringIO()
-    with redirect_stdout(output):
-        exec(code, allowed_builtins)
-    return output
-
+@capture_output
+def execute_code(func, *args):
+    func(*args)
 
 # From a given dictionnary, return the list of functions from a piece of code 
 def get_all_methods(locals_dict: dict):
@@ -38,39 +30,47 @@ def get_all_methods(locals_dict: dict):
             functions[k] = v
 
 
-def update_payload(payload, output, status):
+def update_payload(payload, output, status, test_result):
     payload["compiled_output"] = base64.b64encode(output.encode('utf-8')).decode('utf-8')
     payload["compiled_status"] = status
+    payload["test_result"] = test_result
 
 
-def run_test(main_name):
-    return allowed_builtins[main_name]()
-    
+def run_tests(tests, main_name):   
+    excepted_result = base64.b64decode(tests[0]["expected_result"]).decode('utf-8')
+    result, std_output = execute_code(allowed_builtins[main_name])
+    if tests[0]["type"] == "stdoutput": return std_output.getvalue().rstrip() == excepted_result
+    return result == excepted_result
+        
 
 def run(payload):
     result = ""
-    status = "failed"
+    test_result = "no test"
+    status = "code cannot be compiled"
+    exercise = payload["exercise"]
 
     try:
-        submission, exercise = handle_payload(payload)
+        submission = handle_payload(payload)
         
         sub_compiled = compile(submission, '', 'exec')
         
-        output = execute_code(sub_compiled)
+        _, output = execute_code(exec, sub_compiled, allowed_builtins)
+        
         result += output.getvalue()
         
+        status = "code compiled successfully"
+        
         if exercise["main_name"] not in allowed_builtins:
-            status = "failure to find function " + exercise["main_name"]
+            test_result = "failure to find function " + exercise["main_name"]
             # Here add more information to output feedback
             
             
-        else:
-            function_output = run_test(exercise["main_name"])
-            
+        elif run_tests(exercise["test_cases"], exercise["main_name"]):
             # Here using a test framework will probably makes much more sense
-            if function_output == base64.b64decode(payload["test_cases"][0]):
-                status = "success"
-
+            test_result = "code gave expected output!"
+            
+        else:
+            test_result = "code output doesn't match expected output"
 
         # It will be interesting to always return the ouput of the code when run with exec to help debugging
         # Yet still run the function again for comparison
@@ -89,8 +89,9 @@ def run(payload):
     except RuntimeError as run_err:
         result += f"'Runtime Error': '{run_err.with_traceback()}'"
 
-    except Exception as ex:
-        result += "Unexpected error. " + str(ex)
+    # except Exception as ex:
+    #     result += "Unexpected error. " + str(ex)
 
-    update_payload(payload, result, status)
+
+    update_payload(payload, result, status, test_result)
     return payload
