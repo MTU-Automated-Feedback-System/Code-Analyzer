@@ -36,7 +36,8 @@ def update_payload(payload, output, status, test_result):
     payload["test_result"] = test_result
 
 
-def run_tests(tests, main_name):   
+def run_tests(tests, main_name):
+    # implement a for loop to run multiple tests 
     excepted_result = base64.b64decode(tests[0]["expected_result"]).decode('utf-8')
     result, std_output = execute_code(allowed_builtins[main_name])
     if tests[0]["type"] == "stdoutput": return std_output.getvalue().rstrip() == excepted_result
@@ -89,8 +90,8 @@ def run(payload):
     except RuntimeError as run_err:
         result += f"'Runtime Error': '{run_err.with_traceback()}'"
 
-    # except Exception as ex:
-    #     result += "Unexpected error. " + str(ex)
+    except Exception as ex:
+        result += "Unexpected error. " + str(ex)
 
 
     update_payload(payload, result, status, test_result)
