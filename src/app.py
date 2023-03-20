@@ -18,8 +18,10 @@ def post_submission():
     print(payload["compiled_status"])
     print(payload["compiled_output"])
     print(payload["test_result"])
-    # payload.pop("exercise")
+    
+    payload.pop("exercise")
     # requests.patch(os.environ.get("API_URL")+"/submission", json=payload)
+    requests.patch("http://127.0.0.1:8080/submission", json=payload)
     
     # Following AWS example returning OK
     # return f"Submission '{payload['submission_id']}' received"
