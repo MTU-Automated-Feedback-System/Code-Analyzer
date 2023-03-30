@@ -1,6 +1,6 @@
 from flask import Flask, request
 from flask_cors import CORS
-import submission, json, requests, os
+import submission, requests, os
 
 app = Flask(__name__)
 CORS(app)
@@ -12,7 +12,7 @@ def hello_world():
 
 @app.route('/submission', methods=["POST"])
 def post_submission():
-    payload = json.loads(request.data)
+    payload = request.get_json()
     payload = submission.run(payload)
     
     print(payload["compiled_status"])
