@@ -24,12 +24,13 @@ def handle_payload(payload):
     submission = base64.b64decode(payload["source_code"])
     return submission
 
-def update_payload_run(payload, output, status, error_type, results, code_feedback):
+def update_payload_run(payload, output, status, error_type, results, code_feedback, cases):
     payload["compiled_output"] = base64.b64encode(output.encode('utf-8')).decode('utf-8')
     payload["error_type"] = error_type
     payload["compiled_status"] = status
     payload["test_cases"] = results
     payload["feedback"]["message"] = code_feedback
+    payload["cases"] = cases
 
 
 def update_payload_feedback(payload, feedback, status):
@@ -81,7 +82,7 @@ def run(payload):
     error_type = "" 
     exercise = payload["exercise"] # Exercise information 
     results = [] # Store test results
-    cases = 0 # Used to calculate the passed cases
+    cases = len(exercise["test_cases"]) # Used to calculate the passed cases
     runtime = 0 # TODO: implement runtime
     simple_feedback = ""
     
@@ -113,12 +114,12 @@ def run(payload):
                     results[i]["output"] = base64.b64encode(results[i]["output"].encode('utf-8')).decode('utf-8')
                     
                     if percentage >= test["threshold"]:
-                        cases += 1
+                        cases -= 1
                         
                 else:
                     results[i]["result"] = results[i]["output"] == test["expected_result"]
                     if results[i]["result"]:
-                        cases += 1
+                        cases -= 1
         
         simple_feedback = gemerate_simple_feedback(results, exercise.get("expected_elements", []), cases)
                 
@@ -144,7 +145,7 @@ def run(payload):
         stdout += get_traceback()
   
   
-    update_payload_run(payload, stdout, status, error_type, results, simple_feedback)
+    update_payload_run(payload, stdout, status, error_type, results, simple_feedback, cases)
 
     return payload
 
