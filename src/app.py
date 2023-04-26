@@ -16,15 +16,22 @@ def hello_world():
 @app.route('/submission', methods=["POST"])
 def post_submission():
     payload = request.get_json()
-    payload = submission.run(payload)
+    
 
-    print(payload["compiled_status"])
-    print(payload["compiled_output"])
-    print(payload["test_result"])
-    print(payload["exercise"].get("expected_expression", []))
-    print(payload["exercise"].get("expected_statement", []))
-
+    if payload["submission_type"] == "run":
+        payload = submission.run(payload)
+        
+    elif payload["submission_type"] == "feedback":
+        payload = submission.feedback(payload)
+    
     payload.pop("exercise")
+    # print(payload)
+    
+    # print(payload["compiled_status"])
+    # print("payload=", payload["compiled_output"])
+    # print(payload["test_result"])
+    # print(payload["exercise"].get("expected_elements", []))
+
     # requests.patch(os.environ.get("API_URL")+"/submission", json=payload)
     requests.patch("http://127.0.0.1:8080/submission", json=payload)
 

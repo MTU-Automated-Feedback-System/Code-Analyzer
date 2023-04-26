@@ -1,15 +1,13 @@
 import base64
 import binascii
 import requests
-import os
+import sys
 import json
+import traceback
 import ast
-import openai
-from my_parsers import StatementFinder, ExpressionFinder
+from my_parsers import  submission_parser
 from my_wrappers import capture_output
-from difflib import SequenceMatcher
-
-openai.api_key = os.environ.get("OPENAI_API_KEY")
+from feedback import get_similarity, chat_case, gemerate_simple_feedback, chat_general
 
 allowed_builtins = {"__builtins__": {"min": min,
                                      "print": print,
@@ -22,22 +20,21 @@ allowed_builtins = {"__builtins__": {"min": min,
                                      "len": len}}
 
 
-def chat(exercise, submission):
-    completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": f"You are an assistant for students that are learning programming.\
-                You will provide feedback in a single sentence for the following assignment:{exercise}"},
-            {"role": "user", "content": "Review this code: " + submission},
-
-        ]
-    )
-    return completion
-
-
 def handle_payload(payload):
     submission = base64.b64decode(payload["source_code"])
     return submission
+
+def update_payload_run(payload, output, status, error_type, results, code_feedback):
+    payload["compiled_output"] = base64.b64encode(output.encode('utf-8')).decode('utf-8')
+    payload["error_type"] = error_type
+    payload["compiled_status"] = status
+    payload["test_cases"] = results
+    payload["feedback"]["message"] = code_feedback
+
+
+def update_payload_feedback(payload, feedback, status):
+    payload["feedback"]["message"] = feedback
+    payload["compiled_status"] = status
 
 
 @capture_output
@@ -46,64 +43,24 @@ def execute_code(func, *args):
     func(*args)
 
 
-def get_all_methods(locals_dict: dict):
-    # From a given dictionnary, return the list of functions from a piece of code
-    dunder = ["__builtins__"]  # Could be replaced by dictionnary if list grows
-    functions = {}
-    for k, v in locals_dict.items():
-        if k not in dunder and isinstance(v, function):
-            functions[k] = v
-
-
-def update_payload(payload, output, status, test_result):
-    payload["compiled_output"] = base64.b64encode(
-        output.encode('utf-8')).decode('utf-8')
-    payload["compiled_status"] = status
-    payload["test_result"] = test_result
-
-
 def run_tests(tests, main_name):
     results = []
     for test in tests:
         result, std_output = execute_code(allowed_builtins[main_name])
         output = std_output.getvalue().rstrip(
-        ) if test["type"] == "stdoutput" else result
-        results.append(output)
+        ) if test["type"] == "stdout" else result
+        results.append({"output": output})
     return results
 
 
-def submission_parser(code, expressions, statements):
-    tree = ast.parse(code)
-    for expr_type in expressions:
-        visitor = ExpressionFinder(expr_type)
-        visitor.visit(tree)
-        for node in visitor.found:
-            expressions[expr_type].append(
-                f"Found a {expr_type} expression at line {node.lineno}")
+def get_traceback():
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    tb_frames = traceback.extract_tb(exc_traceback)
 
-    for stmt_type in statements:
-        visitor = StatementFinder(stmt_type)
-        visitor.visit(tree)
-        for node in visitor.found:
-            statements[stmt_type].append(f"Found a {stmt_type} statement at line {node.lineno}")
-            
-
-
-def get_similarity(result, expected):
-    percentage = SequenceMatcher(None, result, expected).ratio() * 100
-    print("Percentage: ", percentage)
-
-    match percentage:
-        case p if 0 <= p < 25:
-            return "Very Low Similarity"
-        case p if 25 <= p < 50:
-            return "Low Similarity"
-        case p if 50 <= p < 75:
-            return "High Similarity"
-        case p if 75 <= p <= 100:
-            return "Very High Similarity"
-
-    return "Invalid Percentage"
+    last_frame = tb_frames[-1]  # Get the last frame of the traceback
+    filename, lineno, funcname, text = last_frame
+    
+    return f"{exc_type.__name__}:{text}\n{exc_value}\nLine {lineno}, in {funcname}"
 
 
 def run(payload):
@@ -119,80 +76,97 @@ def run(payload):
     Returns:
         json: updated submission 
     """
-    result = ""
-    test_result = "not tested"
-    status = "error"
-    exercise = payload["exercise"]
-
+    stdout = "" # Output from running the code 
+    status = "error" # Compiled status
+    error_type = "" 
+    exercise = payload["exercise"] # Exercise information 
+    results = [] # Store test results
+    cases = 0 # Used to calculate the passed cases
+    runtime = 0 # TODO: implement runtime
+    simple_feedback = ""
+    
     try:
         submission = handle_payload(payload)
-        submission_parser(submission, exercise.get(
-            "expected_expression", {}), exercise.get("expected_statement", {}))
+        submission_parser(submission, exercise.get("expected_elements", []))
+        
         sub_compiled = compile(submission, '', 'exec')
 
         _, output = execute_code(exec, sub_compiled, allowed_builtins)
 
-        result += output.getvalue()
-
-        status = "compiled"
-
-        if exercise["main_name"] not in allowed_builtins:
-            test_result = "Function " + \
-                exercise["main_name"] + \
-                "() is missing. Please update your code and try again."
-
-        else:
-            results = run_tests(exercise["test_cases"], exercise["main_name"])
-
-            for i, test in enumerate(exercise["test_cases"]):
-
-                if test["type"] == "stdoutput":
-                    excepted_result = base64.b64decode(
-                        test["expected_result"]).decode('utf-8')
-                    test["result"] = get_similarity(
-                        results[i], excepted_result)
-                else:
-                    excepted_result = test["expected_result"]
-                    test["result"] = results[i] == excepted_result
-
-        # print(chat(exercise['description']['description'], submission.decode('utf-8')))
+        stdout = output.getvalue()
         
+        if exercise["main_name"] not in allowed_builtins:
+            error_type = "Missing Function"
+            stdout = "Function " + \
+                exercise["main_name"] + \
+                "() is missing.\nPlease update your code and try again."
+        
+        else:
+            status = "compiled"
+            results = run_tests(exercise["test_cases"], exercise["main_name"])
+            
+            for i, test in enumerate(exercise["test_cases"]):
+                
+                if test["type"] == "stdout":
+                    excepted_result = base64.b64decode(test["expected_result"]).decode('utf-8')
+                    percentage, results[i]["result"] =  get_similarity(results[i]["output"], excepted_result)
+                    results[i]["output"] = base64.b64encode(results[i]["output"].encode('utf-8')).decode('utf-8')
+                    
+                    if percentage >= test["threshold"]:
+                        cases += 1
+                        
+                else:
+                    results[i]["result"] = results[i]["output"] == test["expected_result"]
+                    if results[i]["result"]:
+                        cases += 1
+        
+        simple_feedback = gemerate_simple_feedback(results, exercise.get("expected_elements", []), cases)
+                
+
     except binascii.Error as decode_err:
-        result += decode_err.msg
-
+        error_type = "Decode Error"
+        stdout += get_traceback()
+        
     except SyntaxError as err:
-        result += f"'Syntax Error': '{err.msg}'"
-
+        error_type = "Syntax Error"
+        stdout += get_traceback()
+        
     except NameError as name_err:
-        result += f"'Name Error': '{name_err.name}'"
-
+        error_type = "Name Error"
+        stdout += get_traceback()
+        
     except RuntimeError as run_err:
-        result += f"'Runtime Error': '{run_err.with_traceback()}'"
-
+        error_type = "Runtime Error"
+        stdout += get_traceback()
+        
     except Exception as ex:
-        result += "Unexpected error. " + str(ex)
-
-    update_payload(payload, result, status, test_result)
+        error_type = "Unexpected Error"
+        stdout += get_traceback()
+  
+  
+    update_payload_run(payload, stdout, status, error_type, results, simple_feedback)
 
     return payload
 
 
-def feedback(payload):
-    result = ""
-    test_result = "no test"
-    status = "error"
-    exercise = payload["exercise"]
 
+def feedback(payload):
+    exercise = payload["exercise"]
+    ai_feedback = ""
+    
     try:
         submission = handle_payload(payload)
-
+        
+        if payload["feedback"]["type"] == "general":
+            ai_feedback = chat_general(exercise, submission.decode('utf-8'))
+            
+        elif payload["feedback"]["type"] == "case":
+            case_index = payload["feedback"]["case"]
+            code_output = base64.b64decode(payload["test_cases"][case_index]["output"]).decode('utf-8')
+            ai_feedback = chat_case(exercise, submission.decode('utf-8'), case_index, code_output)
+        
     except binascii.Error as decode_err:
         result += decode_err.msg
-
-    chat(exercise['description']['description'], submission.decode('utf-8'))
-
-    submission_parser(
-        submission, payload["expected_expression"], payload["expected_statement"])
-
-    update_payload(payload, result, status, test_result)
+        
+    update_payload_feedback(payload, ai_feedback, "compiled")
     return payload
