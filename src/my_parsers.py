@@ -10,6 +10,22 @@ class GenericFinder(ast.NodeVisitor):
             self.found.append(node)
         super().generic_visit(node)
 
+class RecursionDetector(ast.NodeVisitor):
+    def __init__(self):
+        self.function_name = None
+        self.recursive = False
+
+    def visit_FunctionDef(self, node):
+        if self.function_name is None:
+            self.function_name = node.name
+        self.generic_visit(node)
+
+    def visit_Call(self, node):
+        if isinstance(node.func, ast.Name) and node.func.id == self.function_name:
+            self.recursive = True
+        self.generic_visit(node)
+
+
 
 def get_all_methods(locals_dict: dict):
     # From a given dictionnary, return the list of functions from a piece of code
@@ -23,9 +39,10 @@ def get_all_methods(locals_dict: dict):
 def submission_parser(code, elements):
     tree = ast.parse(code)
     
-    for element in elements:
-        visitor = GenericFinder(element)
+    for i, element in enumerate(elements):
+        node_type = element["name"]
+        visitor = GenericFinder(node_type)
         visitor.visit(tree)
         for node in visitor.found:
-            elements[element].append(node.lineno)
+            elements[i]["occurences"].append(node.lineno)
 

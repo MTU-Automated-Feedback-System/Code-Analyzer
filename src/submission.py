@@ -44,10 +44,10 @@ def execute_code(func, *args):
     func(*args)
 
 
-def run_tests(tests, main_name):
+def run_tests(tests, main_name, curr_allowed_builtins):
     results = []
     for test in tests:
-        result, std_output = execute_code(allowed_builtins[main_name])
+        result, std_output = execute_code(curr_allowed_builtins[main_name])
         output = std_output.getvalue().rstrip(
         ) if test["type"] == "stdout" else result
         results.append({"output": output})
@@ -85,18 +85,21 @@ def run(payload):
     cases = len(exercise["test_cases"]) # Used to calculate the passed cases
     runtime = 0 # TODO: implement runtime
     simple_feedback = ""
+    curr_allowed_builtins = allowed_builtins.copy() # Copy the allowed builtins to avoid changing the original dict
+
     
     try:
         submission = handle_payload(payload)
+        
         submission_parser(submission, exercise.get("expected_elements", []))
         
         sub_compiled = compile(submission, '', 'exec')
 
-        _, output = execute_code(exec, sub_compiled, allowed_builtins)
+        _, output = execute_code(exec, sub_compiled, curr_allowed_builtins)
 
         stdout = output.getvalue()
         
-        if exercise["main_name"] not in allowed_builtins:
+        if exercise["main_name"] not in curr_allowed_builtins:
             error_type = "Missing Function"
             stdout = "Function " + \
                 exercise["main_name"] + \
@@ -104,7 +107,7 @@ def run(payload):
         
         else:
             status = "compiled"
-            results = run_tests(exercise["test_cases"], exercise["main_name"])
+            results = run_tests(exercise["test_cases"], exercise["main_name"], curr_allowed_builtins)
             
             for i, test in enumerate(exercise["test_cases"]):
                 

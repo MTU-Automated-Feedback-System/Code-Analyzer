@@ -5,12 +5,18 @@ openai.api_key = os.environ.get("OPENAI_API_KEY")
 
 def gemerate_simple_feedback(results, expected_elements, cases):
     
-    feedback =  "Congratulations you passed all the tests.\n" if cases == 0 else "You passed " + str(len(results) - cases) + " tests.\n"
+    feedback =  "Congratulations you passed all the tests!\n" if cases == 0 else "You passed " + str(len(results) - cases) + " tests.\n"
     
-    for element, lines in expected_elements.items():
-        feedback += f"As expected, you are using {element} at line(s): {', '.join(map(str, lines))}." if len(lines) > 0 \
-            else f"Your code is not using any {element}."
-    
+    for elements in expected_elements:
+        element = elements["name"]
+        lines = elements["occurences"]
+        if len(lines) > 0:
+            feedback += f"Your code is using {element} at line(s): {', '.join(map(str, lines))}.\n"
+        elif len(elements["hint"]) > 0:
+            feedback += elements["hint"] + "\n"
+        else:
+            feedback += f"Your code is not using any {element}.\n"
+
     for i, result in enumerate(results):
         if result["result"] == False:
             feedback += f" For case {i+1} your code did not pass."
