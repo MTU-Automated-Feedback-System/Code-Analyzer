@@ -3,10 +3,18 @@ import openai
 import os
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 
-def gemerate_simple_feedback(results, expected_elements, cases):
-    
-    feedback =  "Congratulations you passed all the tests!\n" if cases == 0 else "You passed " + str(len(results) - cases) + " tests.\n"
-    
+# This function could be modularized
+
+# Test of the above function
+def generate_passed_tests_message(cases: int, total_tests: int) -> str:
+    if cases == 0:
+        return "Congratulations you passed all the tests!\n"
+    else:
+        return f"You passed {total_tests - cases} tests.\n"
+
+
+def generate_elements_feedback(expected_elements: list) -> str:
+    feedback = ""
     for elements in expected_elements:
         element = elements["name"]
         lines = elements["occurences"]
@@ -16,14 +24,29 @@ def gemerate_simple_feedback(results, expected_elements, cases):
             feedback += elements["hint"] + "\n"
         else:
             feedback += f"Your code is not using any {element}.\n"
+    return feedback
 
+
+def generate_test_cases_feedback(results: list) -> str:
+    feedback = ""
     for i, result in enumerate(results):
         if result["result"] == False:
             feedback += f" For case {i+1} your code did not pass."
         elif type(result["result"]) == str:
             feedback += f" For case {i+1} your code has a {result['result']}."
-    
     return feedback
+
+
+def gemerate_simple_feedback(results, expected_elements, cases):
+    total_tests = len(results)
+    
+    passed_tests_message = generate_passed_tests_message(cases, total_tests)
+    elements_feedback = generate_elements_feedback(expected_elements)
+    test_cases_feedback = generate_test_cases_feedback(results)
+    
+    return passed_tests_message + elements_feedback + test_cases_feedback
+
+
 
 
 def get_similarity(result, expected):
@@ -39,7 +62,7 @@ def get_similarity(result, expected):
             return percentage, "high similarity"
         case p if 75 <= p <= 100:
             return percentage, "very high similarity"
-
+        
     return 0, "invalid percentage"
 
 
@@ -48,7 +71,7 @@ def get_similarity(result, expected):
     It seems that the current model "gpt-3.5-turbo" is not able to have a complex role.
     It seems better to keep it short and let is construct the answer with a very simple request.
 """
-def chat_general(exercise, submission):
+def chat_general(exercise, submission): # pragma: no cover
     completion = openai.ChatCompletion.create(
     model="gpt-3.5-turbo",
     messages=[
@@ -66,13 +89,13 @@ def chat_general(exercise, submission):
     This setup seems to be able to provide high quality feedback.
     However, since we have a higher amount of words (tokens), the cost is significantly higher. 
 """
-def chat_case(exercise, submission, case_index, code_output):
+def chat_case(exercise, submission, case_index, code_output): # pragma: no cover
     completion = openai.ChatCompletion.create(
     model="gpt-3.5-turbo",
     messages=[
         {"role": "system", "content": f"You are an assistant for students that are learning programming.\
             You will provide feedback for the following assignment:\n{exercise['description']['description']}.\
-            The student solution should use the following elements: {', '.join([e for e in exercise['expected_elements']])}.\
+            The student solution should use the following elements: {', '.join([e['name'] for e in exercise['expected_elements']])}.\
             The student code is failing to pass the following case with the given expected result: {exercise['test_cases'][case_index]}.\
             Provide hints in 2 to 3 sentences to fix the student code and pass the case."},\
         {"role": "user", "content": f"Review this code:  {submission}.\
@@ -87,7 +110,7 @@ def chat_case(exercise, submission, case_index, code_output):
     Unfortunately, this is not working as expected, the model explains too much and does not provide a simple answer.
     It also starts hallucinating and providing feedback that isn't correct, or completely miss some requirements.
 """
-def chat_case_specific_role(exercise, submission):
+def chat_case_specific_role(exercise, submission): # pragma: no cover
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[

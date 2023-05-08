@@ -24,6 +24,7 @@ def handle_payload(payload):
     submission = base64.b64decode(payload["source_code"])
     return submission
 
+
 def update_payload_run(payload, output, status, error_type, results, code_feedback, cases):
     payload["compiled_output"] = base64.b64encode(output.encode('utf-8')).decode('utf-8')
     payload["error_type"] = error_type

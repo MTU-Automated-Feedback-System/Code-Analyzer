@@ -1,4 +1,5 @@
 import ast
+import types
 
 class GenericFinder(ast.NodeVisitor):
     def __init__(self, node_type):
@@ -32,9 +33,10 @@ def get_all_methods(locals_dict: dict):
     dunder = ["__builtins__"]  # Could be replaced by dictionnary if list grows
     functions = {}
     for k, v in locals_dict.items():
-        if k not in dunder and isinstance(v, function):
+        if k not in dunder and isinstance(v, types.FunctionType):
             functions[k] = v
-            
+    return functions
+
 
 def submission_parser(code, elements):
     tree = ast.parse(code)
