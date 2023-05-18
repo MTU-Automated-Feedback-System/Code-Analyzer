@@ -42,16 +42,22 @@ def update_payload_feedback(payload, feedback, status):
 @capture_output
 def execute_code(func, *args):
     # Execute some code and catch all the std output (print) and returns it
-    func(*args)
+    return func(*args)
 
 
 def run_tests(tests, main_name, curr_allowed_builtins):
     results = []
+
     for test in tests:
-        result, std_output = execute_code(curr_allowed_builtins[main_name])
-        output = std_output.getvalue().rstrip(
-        ) if test["type"] == "stdout" else result
+        
+        if test["type"] == "result":
+            result, std_output = execute_code(curr_allowed_builtins[main_name], int(test["input"]))
+        else:    
+            result, std_output = execute_code(curr_allowed_builtins[main_name])
+        
+        output = std_output.getvalue().rstrip() if test["type"] == "stdout" else result
         results.append({"output": output})
+    # print(results)
     return results
 
 
@@ -121,7 +127,10 @@ def run(payload):
                         cases -= 1
                         
                 else:
-                    results[i]["result"] = results[i]["output"] == test["expected_result"]
+                    excepted_result = base64.b64decode(test["expected_result"]).decode('utf-8')
+                    excepted_result = ast.literal_eval(excepted_result)
+                    results[i]["result"] = results[i]["output"] == excepted_result
+                    results[i]["output"] = base64.b64encode(str(results[i]["output"]).encode('utf-8')).decode('utf-8')
                     if results[i]["result"]:
                         cases -= 1
         

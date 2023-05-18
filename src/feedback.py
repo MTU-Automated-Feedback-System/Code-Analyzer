@@ -47,8 +47,6 @@ def gemerate_simple_feedback(results, expected_elements, cases):
     return passed_tests_message + elements_feedback + test_cases_feedback
 
 
-
-
 def get_similarity(result, expected):
     percentage = SequenceMatcher(None, result, expected).ratio() * 100
     print("Percentage: ", percentage)

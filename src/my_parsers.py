@@ -1,14 +1,33 @@
 import ast
 import types
 
+def string_to_ast(s):
+    switcher = {
+        "Add": ast.Add,
+        "Sub": ast.Sub,
+        "Mult": ast.Mult,
+        "MatMult": ast.MatMult,
+        "Div": ast.Div,
+        "Mod": ast.Mod,
+        "Pow": ast.Pow,
+        "LShift": ast.LShift,
+        "RShift": ast.RShift,
+        "BitOr": ast.BitOr,
+        "BitXor": ast.BitXor,
+        "BitAnd": ast.BitAnd,
+        "FloorDiv": ast.FloorDiv
+    }
+    return switcher.get(s, None)
+
 class GenericFinder(ast.NodeVisitor):
     def __init__(self, node_type):
         self.node_type = node_type
         self.found = []
 
     def generic_visit(self, node):
-        if node.__class__.__name__ == self.node_type:
+        if node.__class__.__name__ == self.node_type or (isinstance(node, ast.BinOp) and isinstance(node.op, string_to_ast(self.node_type))):
             self.found.append(node)
+            
         super().generic_visit(node)
 
 class RecursionDetector(ast.NodeVisitor):
@@ -46,5 +65,8 @@ def submission_parser(code, elements):
         visitor = GenericFinder(node_type)
         visitor.visit(tree)
         for node in visitor.found:
-            elements[i]["occurences"].append(node.lineno)
+            # Could change in the future to get the line number from the original code
+            # And to use the following operators to populate our feedback
+            if hasattr(node, 'lineno'):
+                elements[i]["occurences"].append(node.lineno)
 
