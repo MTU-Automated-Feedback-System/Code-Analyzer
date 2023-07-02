@@ -54,10 +54,10 @@ def run_tests(tests, main_name, curr_allowed_builtins):
             result, std_output = execute_code(curr_allowed_builtins[main_name], int(test["input"]))
         else:    
             result, std_output = execute_code(curr_allowed_builtins[main_name])
-        
+        print("Result: ", result)
         output = std_output.getvalue().rstrip() if test["type"] == "stdout" else result
         results.append({"output": output})
-    # print(results)
+    print(results)
     return results
 
 
@@ -93,7 +93,7 @@ def run(payload):
     runtime = 0 # TODO: implement runtime
     simple_feedback = ""
     curr_allowed_builtins = allowed_builtins.copy() # Copy the allowed builtins to avoid changing the original dict
-
+    #   TODO: Get the allowed builtins from the exercise
     
     try:
         submission = handle_payload(payload)
@@ -155,6 +155,7 @@ def run(payload):
         
     except Exception as ex:
         error_type = "Unexpected Error"
+        print(ex)
         stdout += get_traceback()
   
   
@@ -167,7 +168,10 @@ def run(payload):
 def feedback(payload):
     exercise = payload["exercise"]
     ai_feedback = ""
-    
+    exercise["default_code"] = base64.b64decode(exercise["default_code"]).decode('utf-8')
+    for i, test in enumerate(exercise["test_cases"]):
+        exercise["test_cases"][i]["expected_result"] = base64.b64decode(test["expected_result"]).decode('utf-8')
+
     try:
         submission = handle_payload(payload)
         

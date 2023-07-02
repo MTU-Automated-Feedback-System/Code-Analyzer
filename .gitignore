@@ -4,7 +4,7 @@ __pycache__/
 *$py.class
 
 deploy_aws.sh
-
+.vscode
 # Elastic Beanstalk Files
 .elasticbeanstalk/
 !.elasticbeanstalk/*.cfg.yml
