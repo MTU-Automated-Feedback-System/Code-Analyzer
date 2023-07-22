@@ -1,5 +1,5 @@
 import unittest
-from src.feedback import gemerate_simple_feedback, get_similarity,\
+from domain.feedback import gemerate_simple_feedback, get_similarity,\
     generate_passed_tests_message, generate_test_cases_feedback,\
     generate_elements_feedback
 

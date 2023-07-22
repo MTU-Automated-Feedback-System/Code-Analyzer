@@ -1,6 +1,6 @@
 from flask import Flask, request
 from flask_cors import CORS
-import submission
+import domain.submission as submission
 import requests
 import os
 
